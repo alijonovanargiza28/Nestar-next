@@ -13,7 +13,6 @@ import { GET_PROPERTIES } from '../../../apollo/user/query';
 import { T } from '../../types/common';
 import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from '../../sweetAlert';
 import { Message } from '../../enums/common.enum';
-import { likeTargetPropertyHandler } from '../../utils';
 import { LIKE_TARGET_PROPERTY } from '../../../apollo/user/mutation';
 
 interface TrendPropertiesProps {

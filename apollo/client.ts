@@ -41,9 +41,10 @@ function createIsomorphicLink() {
 		});
 
 		// @ts-ignore
-		const link = new createUploadLink({
-			uri: process.env.REACT_APP_API_GRAPHQL_URL,
-		});
+			const link = new createUploadLink({
+	uri: 'http://localhost:3007/graphql',
+});
+	
 
 		/* WEBSOCKET SUBSCRIPTION LINK */
 		const wsLink = new WebSocketLink({

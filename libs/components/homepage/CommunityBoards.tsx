@@ -4,6 +4,10 @@ import useDeviceDetect from '../../hooks/useDeviceDetect';
 import { Stack, Typography } from '@mui/material';
 import CommunityCard from './CommunityCard';
 import { BoardArticle } from '../../types/board-article/board-article';
+import { GET_BOARD_ARTICLE } from '../../../apollo/user/query';
+import { useQuery } from '@apollo/client';
+import { BoardArticleCategory } from '../../enums/board-article.enum';
+import { T } from '../../types/common';
 
 const CommunityBoards = () => {
 	const device = useDeviceDetect();
@@ -15,7 +19,35 @@ const CommunityBoards = () => {
 	const [newsArticles, setNewsArticles] = useState<BoardArticle[]>([]);
 	const [freeArticles, setFreeArticles] = useState<BoardArticle[]>([]);
 
-	/** APOLLO REQUESTS **/
+/** APOLLO REQUESTS **/
+	const {
+		loading: getNewsArticlesLoading, //backenddan malumot olish jarayonida animatsiya data gacha
+		data: getNewsArticlesData,
+		error: getNewsArticlesError,
+		refetch: getNewsArticlesRefetch,
+	} = useQuery(GET_BOARD_ARTICLE, {
+		fetchPolicy: 'network-only', //
+		variables: { input: {...searchCommunity,limit:6,search:{articleCategory:BoardArticleCategory.NEWS}}},
+		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			//malumotr olganda ishga tushuradi qayta malumot kelsa update qilishda tepadagi ishlidi
+			setNewsArticles(data?.getProperties?.list);
+		},
+	});
+	const {
+		loading: getFreeArticlesLoading, //backenddan malumot olish jarayonida animatsiya data gacha
+		data: getFreeArticlesData,
+		error: getFreeArticlesError,
+		refetch: getFreeArticlesRefetch,
+	} = useQuery(GET_BOARD_ARTICLE, {
+		fetchPolicy: 'network-only', //
+		variables: { input: { ...searchCommunity, limit: 3, search: { articleCategory: BoardArticleCategory.FREE } } },
+		notifyOnNetworkStatusChange: true,
+		onCompleted: (data: T) => {
+			//malumotr olganda ishga tushuradi qayta malumot kelsa update qilishda tepadagi ishlidi
+			setFreeArticles(data?.getProperties?.list);
+		},
+	});
 
 	if (device === 'mobile') {
 		return <div>COMMUNITY BOARDS (MOBILE)</div>;

@@ -47,7 +47,7 @@ const TrendProperties = (props: TrendPropertiesProps) => {
 			if (!id) return;
 			if (!user._id) throw new Error(Message.NOT_AUTHENTICATED);
 			await likeTargetProperty({ variables: { input: id } });
-			await getPropertiesRefetch({input:initialInput})
+			await getPropertiesRefetch({input:initialInput})//faqat like refresh boladi
 			await sweetTopSmallSuccessAlert('Success', 800);
 		} catch (err: any) {
 			console.log('ERROR, likePropertyHandler:', err.message);

@@ -84,7 +84,7 @@ query GetMember($input: String!) {
 
 export const GET_PROPERTY = gql`
 	query GetProperty($input: String!) {
-		getProperty(propertyId: $input) {
+		getProperty(input: $input) {
 			_id
 			propertyType
 			propertyStatus
@@ -136,7 +136,6 @@ export const GET_PROPERTY = gql`
 		}
 	}
 `;
-
 export const GET_PROPERTIES = gql`
 	query GetProperties($input: PropertiesInquiry!) {
 		getProperties(input: $input) {

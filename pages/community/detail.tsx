@@ -80,7 +80,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 	const updateButtonHandler = async (commentId: string, commentStatus?: CommentStatus.DELETE) => {};
 
 	const getCommentMemberImage = (imageUrl: string | undefined) => {
-		if (imageUrl) return `${process.env.REACT_APP_API_URL}/${imageUrl}`;
+		if (imageUrl) return `${process.env.NODE_ENV}/${imageUrl}`;
 		else return '/img/community/articleImg.png';
 	};
 

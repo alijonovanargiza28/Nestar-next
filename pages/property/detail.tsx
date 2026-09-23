@@ -78,6 +78,9 @@ const PropertyDetail: NextPage = ({ initialComment, ...props }: any) => {
 		onCompleted(data: T) {
 			if (data?.getProperty) setProperty(data?.getProperty);
 			if (data?.getProperty) setSlideImage(data?.getProperty.propertyImages[0]);
+			console.log('propertyImages:', data?.getProperty.propertyImages);
+
+			console.log('slideImage:', data?.getProperty.propertyImages[0]);
 		},
 	});
 
@@ -506,6 +509,7 @@ const PropertyDetail: NextPage = ({ initialComment, ...props }: any) => {
 											</Box>
 										</Stack>
 									</Stack>
+								
 								)}
 								<Stack className={'leave-review-config'}>
 									<Typography className={'main-title'}>Leave A Review</Typography>

@@ -85,8 +85,8 @@ const Filter = (props: FilterType) => {
 	const propertyLocationSelectHandler = useCallback(
 		async (e: any) => {
 			try {
-				const isChecked = e.target.checked;
-				const value = e.target.value;
+				const isChecked = e.target.checked; //true 
+				const value = e.target.value; //seoul
 				if (isChecked) {
 					await router.push(
 						`/property?input=${JSON.stringify({

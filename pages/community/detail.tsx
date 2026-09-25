@@ -5,7 +5,7 @@ import useDeviceDetect from '../../libs/hooks/useDeviceDetect';
 import withLayoutBasic from '../../libs/components/layout/LayoutBasic';
 import { Button, Stack, Typography, Tab, Tabs, IconButton, Backdrop, Pagination } from '@mui/material';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import { useReactiveVar } from '@apollo/client';
+import { useMutation, useQuery, useReactiveVar } from '@apollo/client';
 import Moment from 'react-moment';
 import { userVar } from '../../apollo/store';
 import ThumbUpOffAltIcon from '@mui/icons-material/ThumbUpOffAlt';
@@ -13,14 +13,25 @@ import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ChatIcon from '@mui/icons-material/Chat';
 import ChatBubbleOutlineRoundedIcon from '@mui/icons-material/ChatBubbleOutlineRounded';
-import { CommentsInquiry } from '../../libs/types/comment/comment.input';
+import { CommentInput, CommentsInquiry } from '../../libs/types/comment/comment.input';
 import { Comment } from '../../libs/types/comment/comment';
 import dynamic from 'next/dynamic';
-import { CommentStatus } from '../../libs/enums/comment.enum';
+import { CommentGroup, CommentStatus } from '../../libs/enums/comment.enum';
 import { T } from '../../libs/types/common';
 import EditIcon from '@mui/icons-material/Edit';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import { BoardArticle } from '../../libs/types/board-article/board-article';
+import { CREATE_COMMENT, LIKE_TARGET_BOARD_ARTICLE, UPDATE_COMMENT } from '../../apollo/user/mutation';
+import { GET_BOARD_ARTICLE, GET_COMMENTS } from '../../apollo/user/query';
+import { Messages } from '../../libs/config';
+import {
+	sweetConfirmAlert,
+	sweetMixinErrorAlert,
+	sweetMixinSuccessAlert,
+	sweetTopSmallSuccessAlert,
+} from '../../libs/sweetAlert';
+import { CommentUpdate } from '../../libs/types/comment/comment.update';
+
 const ToastViewerComponent = dynamic(() => import('../../libs/components/community/TViewer'), { ssr: false });
 
 export const getStaticProps = async ({ locale }: any) => ({
@@ -58,12 +69,59 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 
 	/** APOLLO REQUESTS **/
 
+	const [likeTargetBoardArticle] = useMutation(LIKE_TARGET_BOARD_ARTICLE);
+	const [createComment] = useMutation(CREATE_COMMENT);
+	const [updateComment] = useMutation(UPDATE_COMMENT);
+
+	const {
+		loading: boardArticleLoading,
+		data: boardArticleData,
+		error: getBoardArticleError,
+		refetch: boardArticleRefetch,
+	} = useQuery(GET_BOARD_ARTICLE, {
+		fetchPolicy: 'network-only',
+		variables: {
+			input: articleId,
+		},
+		notifyOnNetworkStatusChange: true,
+		onCompleted(data: any) {
+			setBoardArticle(data?.getBoardArticle);
+
+			if (data?.getBoardArticle?.memberData?.memberImage) {
+				setMemberImage(`${process.env.REACT_APP_API_URL}/${data?.getBoardArticle?.memberData?.memberImage}`);
+			}
+		},
+	});
+
+	const {
+		loading: getCommentsLoading,
+		data: getCommentsData,
+		error: getCommentsError,
+		refetch: getCommentsRefetch,
+	} = useQuery(GET_COMMENTS, {
+		fetchPolicy: 'cache-and-network',
+		variables: {
+			input: searchFilter,
+		},
+		notifyOnNetworkStatusChange: true,
+		onCompleted(data: any) {
+			setComments(data?.getComments?.list);
+			setTotal(data?.getComments?.metaCounter?.[0]?.total || 0);
+		},
+	});
+
 	/** LIFECYCLES **/
+
 	useEffect(() => {
-		if (articleId) setSearchFilter({ ...searchFilter, search: { commentRefId: articleId } });
+		if (articleId)
+			setSearchFilter({
+				...searchFilter,
+				search: { commentRefId: articleId },
+			});
 	}, [articleId]);
 
 	/** HANDLERS **/
+
 	const tabChangeHandler = (event: React.SyntheticEvent, value: string) => {
 		router.replace(
 			{
@@ -75,12 +133,122 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 		);
 	};
 
-	const creteCommentHandler = async () => {};
+	const likeBoArticleHandler = async (user: any, id: any) => {
+		try {
+			if (likeLoading) return;
 
-	const updateButtonHandler = async (commentId: string, commentStatus?: CommentStatus.DELETE) => {};
+			if (!id) return;
+
+			if (!user?._id) throw new Error(Messages.error2);
+
+			setLikeLoading(true);
+
+			await likeTargetBoardArticle({
+				variables: {
+					input: id,
+				},
+			});
+
+			await boardArticleRefetch({
+				input: articleId,
+			});
+
+			await sweetTopSmallSuccessAlert('Success!', 800);
+		} catch (err: any) {
+			console.log('ERROR, likeBoArticleHandler:', err.message);
+			sweetMixinErrorAlert(err.message).then();
+		} finally {
+			setLikeLoading(false);
+		}
+	};
+
+	const createCommentHandler = async () => {
+		if (!comment) return;
+
+		try {
+			if (!user?._id) throw new Error(Messages.error2);
+
+			const commentInput: CommentInput = {
+				commentGroup: CommentGroup.ARTICLE,
+				commentRefId: articleId,
+				commentContent: comment,
+			};
+
+			await createComment({
+				variables: {
+					input: commentInput,
+				},
+			});
+
+			await getCommentsRefetch({
+				input: searchFilter,
+			});
+
+			await boardArticleRefetch({
+				input: articleId,
+			});
+
+			setComment('');
+			setWordsCnt(0);
+
+			await sweetMixinSuccessAlert('Successfully commented!');
+		} catch (error: any) {
+			await sweetMixinErrorAlert(error.message);
+		}
+	};
+
+	const updateButtonHandler = async (commentId: string, commentStatus?: CommentStatus.DELETE) => {
+		try {
+			if (!user?._id) throw new Error(Messages.error2);
+
+			if (!commentId) throw new Error('Select a comment to update!');
+
+			if (updatedComment === comments?.find((comment) => comment?._id === commentId)?.commentContent) return;
+
+			const updateData: CommentUpdate = {
+				_id: commentId,
+				...(commentStatus && { commentStatus: commentStatus }),
+				...(updatedComment && { commentContent: updatedComment }),
+			};
+
+			if (!updateData?.commentContent && !updateData?.commentStatus)
+				throw new Error('Provide data to update your comment!');
+
+			if (commentStatus) {
+				if (await sweetConfirmAlert('Do you want to delete the comment?')) {
+					await updateComment({
+						variables: {
+							input: updateData,
+						},
+					});
+
+					await sweetMixinSuccessAlert('Successfully deleted!');
+				} else return;
+			} else {
+				await updateComment({
+					variables: {
+						input: updateData,
+					},
+				});
+
+				await sweetMixinSuccessAlert('Successfully updated!');
+			}
+
+			await getCommentsRefetch({
+				input: searchFilter,
+			});
+		} catch (error: any) {
+			await sweetMixinErrorAlert(error.message);
+		} finally {
+			setOpenBackdrop(false);
+			setUpdatedComment('');
+			setUpdatedCommentWordsCnt(0);
+			setUpdatedCommentId('');
+		}
+	};
 
 	const getCommentMemberImage = (imageUrl: string | undefined) => {
-		if (imageUrl) return `${process.env.NODE_ENV}/${imageUrl}`;
+		if (imageUrl) return `${process.env.REACT_APP_API_URL}/${imageUrl}`;
 		else return '/img/community/articleImg.png';
 	};
 
@@ -119,6 +287,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 									<Typography className={'name'}>Community Board Article</Typography>
 								</Stack>
 							</Stack>
+
 							<Tabs
 								orientation="vertical"
 								aria-label="lab API tabs example"
@@ -150,6 +319,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 								/>
 							</Tabs>
 						</Stack>
+
 						<div className="community-detail-config">
 							<Stack className="title-box">
 								<Stack className="left">
@@ -158,6 +328,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 										Express your opinions freely here without content restrictions
 									</Typography>
 								</Stack>
+
 								<Button
 									onClick={() =>
 										router.push({
@@ -172,11 +343,13 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 									Write
 								</Button>
 							</Stack>
+
 							<div className="config">
 								<Stack className="first-box-config">
 									<Stack className="content-and-info">
 										<Stack className="content">
 											<Typography className="content-data">{boardArticle?.articleTitle}</Typography>
+
 											<Stack className="member-info">
 												<img
 													src={memberImage}
@@ -184,27 +357,36 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 													className="member-img"
 													onClick={() => goMemberPage(boardArticle?.memberData?._id)}
 												/>
+
 												<Typography className="member-nick" onClick={() => goMemberPage(boardArticle?.memberData?._id)}>
 													{boardArticle?.memberData?.memberNick}
 												</Typography>
+
 												<Stack className="divider"></Stack>
+
 												<Moment className={'time-added'} format={'DD.MM.YY HH:mm'}>
 													{boardArticle?.createdAt}
 												</Moment>
 											</Stack>
 										</Stack>
+
 										<Stack className="info">
 											<Stack className="icon-info">
-												{boardArticle?.meLiked ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
+												{boardArticle?.meLiked?.[0]?.myFavorite ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
 
 												<Typography className="text">{boardArticle?.articleLikes}</Typography>
 											</Stack>
+
 											<Stack className="divider"></Stack>
+
 											<Stack className="icon-info">
 												<VisibilityIcon />
+
 												<Typography className="text">{boardArticle?.articleViews}</Typography>
 											</Stack>
+
 											<Stack className="divider"></Stack>
+
 											<Stack className="icon-info">
 												{boardArticle?.articleComments && boardArticle?.articleComments > 0 ? (
 													<ChatIcon />
@@ -216,23 +398,31 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 											</Stack>
 										</Stack>
 									</Stack>
+
 									<Stack>
 										<ToastViewerComponent markdown={boardArticle?.articleContent} className={'ytb_play'} />
 									</Stack>
+
 									<Stack className="like-and-dislike">
 										<Stack className="top">
-											<Button>
-												{boardArticle?.meLiked ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
+											<Button onClick={() => likeBoArticleHandler(user, boardArticle?._id)}>
+												{boardArticle?.meLiked?.[0]?.myFavorite ? <ThumbUpAltIcon /> : <ThumbUpOffAltIcon />}
+
 												<Typography className="text">{boardArticle?.articleLikes}</Typography>
 											</Button>
 										</Stack>
 									</Stack>
 								</Stack>
+
 								<Stack
 									className="second-box-config"
-									sx={{ borderBottom: total > 0 ? 'none' : '1px solid #eee', border: '1px solid #eee' }}
+									sx={{
+										borderBottom: total > 0 ? 'none' : '1px solid #eee',
+										border: '1px solid #eee',
+									}}
 								>
 									<Typography className="title-text">Comments ({total})</Typography>
+
 									<Stack className="leave-comment">
 										<input
 											type="text"
@@ -244,17 +434,21 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 												setComment(e.target.value);
 											}}
 										/>
+
 										<Stack className="button-box">
 											<Typography>{wordsCnt}/100</Typography>
-											<Button onClick={creteCommentHandler}>comment</Button>
+
+											<Button onClick={createCommentHandler}>comment</Button>
 										</Stack>
 									</Stack>
 								</Stack>
+
 								{total > 0 && (
 									<Stack className="comments">
 										<Typography className="comments-title">Comments</Typography>
 									</Stack>
 								)}
+
 								{comments?.map((commentData, index) => {
 									return (
 										<Stack className="comments-box" key={commentData?._id}>
@@ -265,8 +459,10 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 														onClick={() => goMemberPage(commentData?.memberData?._id as string)}
 													>
 														<img src={getCommentMemberImage(commentData?.memberData?.memberImage)} alt="" />
+
 														<Stack className="name-date-column">
 															<Typography className="name">{commentData?.memberData?.memberNick}</Typography>
+
 															<Typography className="date">
 																<Moment className={'time-added'} format={'DD.MM.YY HH:mm'}>
 																	{commentData?.createdAt}
@@ -274,6 +470,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 															</Typography>
 														</Stack>
 													</Stack>
+
 													{commentData?.memberId === user?._id && (
 														<Stack className="buttons">
 															<IconButton
@@ -282,8 +479,14 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 																	updateButtonHandler(commentData?._id, CommentStatus.DELETE);
 																}}
 															>
-																<DeleteForeverIcon sx={{ color: '#757575', cursor: 'pointer' }} />
+																<DeleteForeverIcon
+																	sx={{
+																		color: '#757575',
+																		cursor: 'pointer',
+																	}}
+																/>
 															</IconButton>
+
 															<IconButton
 																onClick={(e) => {
 																	setUpdatedComment(commentData?.commentContent);
@@ -294,6 +497,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 															>
 																<EditIcon sx={{ color: '#757575' }} />
 															</IconButton>
+
 															<Backdrop
 																sx={{
 																	top: '40%',
@@ -322,6 +526,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 																	<Typography variant="h4" color={'#b9b9b9'}>
 																		Update comment
 																	</Typography>
+
 																	<Stack gap={'20px'}>
 																		<input
 																			autoFocus
@@ -336,11 +541,19 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 																				borderRadius: '5px',
 																			}}
 																		/>
+
 																		<Stack width={'100%'} flexDirection={'row'} justifyContent={'space-between'}>
 																			<Typography variant="subtitle1" color={'#b9b9b9'}>
 																				{updatedCommentWordsCnt}/100
 																			</Typography>
-																			<Stack sx={{ flexDirection: 'row', alignSelf: 'flex-end', gap: '10px' }}>
+
+																			<Stack
+																				sx={{
+																					flexDirection: 'row',
+																					alignSelf: 'flex-end',
+																					gap: '10px',
+																				}}
+																			>
 																				<Button
 																					variant="outlined"
 																					color="inherit"
@@ -348,6 +561,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 																				>
 																					Cancel
 																				</Button>
+
 																				<Button
 																					variant="contained"
 																					color="inherit"
@@ -363,6 +577,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 														</Stack>
 													)}
 												</Stack>
+
 												<Stack className="content">
 													<Typography>{commentData?.commentContent}</Typography>
 												</Stack>
@@ -370,6 +585,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 										</Stack>
 									);
 								})}
+
 								{total > 0 && (
 									<Stack className="pagination-box">
 										<Pagination
@@ -389,6 +605,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 		);
 	}
 };
+
 CommunityDetail.defaultProps = {
 	initialInput: {
 		page: 1,

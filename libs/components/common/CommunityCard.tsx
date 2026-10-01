@@ -16,6 +16,7 @@ interface CommunityCardProps {
 	boardArticle: BoardArticle;
 	size?: string;
 	likeArticleHandler: any;
+
 }
 
 const CommunityCard = (props: CommunityCardProps) => {
@@ -28,6 +29,9 @@ const CommunityCard = (props: CommunityCardProps) => {
 	const imagePath: string = boardArticle?.articleImage
 		? `${REACT_APP_API_URL}/${boardArticle?.articleImage}`
 		: '/img/community/communityImg.png';
+		console.log('ARTICLE#########:', boardArticle);
+		console.log('ARTICLE IMAGE#########:', boardArticle?.articleImage);
+		console.log('IMAGE PATH:#########', imagePath);
 
 	/** HANDLERS **/
 

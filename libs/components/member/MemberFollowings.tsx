@@ -9,18 +9,19 @@ import { REACT_APP_API_URL } from '../../config';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { userVar } from '../../../apollo/store';
-import { GET_MEMBER_FOLLOWINGS } from '../../../apollo/user/query';
+import { GET_MEMBER_FOLLOWERS, GET_MEMBER_FOLLOWINGS } from '../../../apollo/user/query';
+import { T } from '../../types/common';
 
 interface MemberFollowingsProps {
 	initialInput: FollowInquiry;
 	subscribeHandler: any;
-	likeMemberHandler:any;
 	unsubscribeHandler: any;
 	redirectToMemberPageHandler: any;
+	likeMemberHandler: any;
 }
 
 const MemberFollowings = (props: MemberFollowingsProps) => {
-	const { initialInput, subscribeHandler, unsubscribeHandler, redirectToMemberPageHandler, likeMemberHandler } = props;
+	const { initialInput, subscribeHandler, likeMemberHandler, unsubscribeHandler, redirectToMemberPageHandler } = props;
 	const device = useDeviceDetect();
 	const router = useRouter();
 	const [total, setTotal] = useState<number>(0);
@@ -30,7 +31,6 @@ const MemberFollowings = (props: MemberFollowingsProps) => {
 	const user = useReactiveVar(userVar);
 
 	/** APOLLO REQUESTS **/
-
 	const {
 		loading: getMemberFollowingsLoading,
 		data: getMemberFollowingsData,
@@ -38,19 +38,13 @@ const MemberFollowings = (props: MemberFollowingsProps) => {
 		refetch: getMemberFollowingsRefetch,
 	} = useQuery(GET_MEMBER_FOLLOWINGS, {
 		fetchPolicy: 'network-only',
-
-		variables: {
-			input: followInquiry,
-		},
-
-		skip: !followInquiry?.search?.followingId,
-
+		variables: { input: followInquiry },
+		skip: !followInquiry?.search?.followerId,
 		notifyOnNetworkStatusChange: true,
-
-		onCompleted: (data: any) => {
-			setMemberFollowings(data?.getMemberFollowings?.list || []);
-
-			setTotal(data?.getMemberFollowings?.metaCounter?.[0]?.total || 0);
+		onCompleted: (data: T) => {
+			console.log('dbhjbehf', data?.getMemberFollowings?.list);
+			setMemberFollowings(data?.getMemberFollowings?.list);
+			setTotal(data?.getMemberFollowings?.metaCounter[0]?.total);
 		},
 	});
 
@@ -62,7 +56,7 @@ const MemberFollowings = (props: MemberFollowingsProps) => {
 	}, [router]);
 
 	useEffect(() => {
-		getMemberFollowingsRefetch({input:followInquiry}).then()
+		getMemberFollowingsRefetch({ input: followInquiry }).then();
 	}, [followInquiry]);
 
 	/** HANDLERS **/
@@ -121,13 +115,13 @@ const MemberFollowings = (props: MemberFollowingsProps) => {
 											<FavoriteIcon
 												color="primary"
 												onClick={() =>
-													likeMemberHandler(follower?.followingData?._id, getMemberFollowingsRefetch, followInquiry)
+													likeMemberHandler(follower.followingData?._id, getMemberFollowingsRefetch, followInquiry)
 												}
 											/>
 										) : (
 											<FavoriteBorderIcon
 												onClick={() =>
-													likeMemberHandler(follower?.followingData?._id, getMemberFollowingsRefetch, followInquiry)
+													likeMemberHandler(follower.followingData?._id, getMemberFollowingsRefetch, followInquiry)
 												}
 											/>
 										)}

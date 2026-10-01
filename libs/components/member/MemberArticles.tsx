@@ -10,8 +10,8 @@ import { BoardArticlesInquiry } from '../../types/board-article/board-article.in
 import { useMutation, useQuery } from '@apollo/client';
 import { LIKE_TARGET_BOARD_ARTICLE } from '../../../apollo/user/mutation';
 import { GET_BOARD_ARTICLES } from '../../../apollo/user/query';
-import { sweetMixinErrorAlert, sweetTopSmallSuccessAlert } from '../../sweetAlert';
 import { Messages } from '../../config';
+import { sweetTopSmallSuccessAlert, sweetMixinErrorAlert } from '../../sweetAlert';
 
 const MemberArticles: NextPage = ({ initialInput, ...props }: any) => {
 	const device = useDeviceDetect();
@@ -22,7 +22,6 @@ const MemberArticles: NextPage = ({ initialInput, ...props }: any) => {
 	const [memberBoArticles, setMemberBoArticles] = useState<BoardArticle[]>([]);
 
 	/** APOLLO REQUESTS **/
-
 	const [likeTargetBoardArticle] = useMutation(LIKE_TARGET_BOARD_ARTICLE);
 
 	const {
@@ -32,17 +31,13 @@ const MemberArticles: NextPage = ({ initialInput, ...props }: any) => {
 		refetch: boardArticlesRefetch,
 	} = useQuery(GET_BOARD_ARTICLES, {
 		fetchPolicy: 'network-only',
-
 		variables: {
 			input: searchFilter,
 		},
-
 		notifyOnNetworkStatusChange: true,
-
 		onCompleted: (data: any) => {
-			setMemberBoArticles(data?.getBoardArticles?.list || []);
-
-			setTotal(data?.getBoardArticles?.metaCounter?.[0]?.total ?? 0);
+			setMemberBoArticles(data?.getBoardArticles?.list);
+			setTotal(data?.getBoardArticles?.metaCounter?.[0]?.total || 0);
 		},
 	});
 
@@ -51,39 +46,28 @@ const MemberArticles: NextPage = ({ initialInput, ...props }: any) => {
 		if (memberId) setSearchFilter({ ...initialInput, search: { memberId: memberId } });
 	}, [memberId]);
 
+	/** HANDLERS **/
+	const paginationHandler = (e: T, value: number) => {
+		setSearchFilter({ ...searchFilter, page: value });
+	};
+
 	const likeArticleHandler = async (e: any, user: any, id: string) => {
 		try {
 			e.stopPropagation();
-
-			if (!id) {
-				return;
-			}
-
-			if (!user._id) {
-				throw new Error(Messages.error2);
-			}
+			if (!id) return;
+			if (!user._id) throw new Error(Messages.error2);
 
 			await likeTargetBoardArticle({
 				variables: {
 					input: id,
 				},
 			});
-
-			await boardArticlesRefetch({
-				input: searchFilter,
-			});
-
-			await sweetTopSmallSuccessAlert('Success', 800);
+			await boardArticlesRefetch({ input: searchFilter });
+			await sweetTopSmallSuccessAlert('success', 800);
 		} catch (err: any) {
 			console.log('ERROR, likePropertyHandler:', err.message);
-
 			sweetMixinErrorAlert(err.message).then();
 		}
-	};
-
-	/** HANDLERS **/
-	const paginationHandler = (e: T, value: number) => {
-		setSearchFilter({ ...searchFilter, page: value });
 	};
 
 	if (device === 'mobile') {

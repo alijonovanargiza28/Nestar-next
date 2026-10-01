@@ -36,12 +36,19 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 	/** LIFECYCLES **/
 
 	useEffect(() => {
+		if (!user) return;
+
 		setUpdateData((prev) => ({
 			...prev,
-			memberNick: user?.memberNick || '',
-			memberPhone: user?.memberPhone || '',
-			memberAddress: user?.memberAddress || '',
-			memberImage: user?.memberImage || '',
+
+			memberNick: user.memberNick || '',
+			memberPhone: user.memberPhone || '',
+			memberAddress: user.memberAddress || '',
+
+			// IMPORTANT:
+			// Agar yangi upload qilingan image mavjud bo'lsa,
+			// eski user.memberImage uni bosib ketmaydi.
+			memberImage: prev.memberImage || user.memberImage || '',
 		}));
 	}, [user]);
 
@@ -53,9 +60,23 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 
 			if (!image) return;
 
-			console.log('+image:', image);
+			console.log('==============================');
+			console.log('SELECTED IMAGE:', image);
+			console.log('IMAGE NAME:', image.name);
+			console.log('IMAGE TYPE:', image.type);
+			console.log('IMAGE SIZE:', image.size);
+			console.log('==============================');
+
+			// File type check
+			const allowedTypes = ['image/jpg', 'image/jpeg', 'image/png'];
+
+			if (!allowedTypes.includes(image.type)) {
+				throw new Error('Only JPG, JPEG or PNG images are allowed.');
+			}
 
 			const formData = new FormData();
+
+			/** GRAPHQL OPERATIONS **/
 
 			formData.append(
 				'operations',
@@ -78,6 +99,8 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 				}),
 			);
 
+			/** GRAPHQL MAP **/
+
 			formData.append(
 				'map',
 				JSON.stringify({
@@ -85,38 +108,72 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 				}),
 			);
 
+			/** FILE **/
+
 			formData.append('0', image);
+
+			console.log('UPLOADING MEMBER IMAGE...');
+
+			/** REQUEST **/
 
 			const response = await axios.post(REACT_APP_API_GRAPHQL_URL, formData, {
 				headers: {
 					'Content-Type': 'multipart/form-data',
+
 					'apollo-require-preflight': true,
+
 					Authorization: `Bearer ${token}`,
 				},
 			});
 
-			console.log('+response:', response);
+			console.log('UPLOAD RESPONSE:', response.data);
+
+			/** GRAPHQL ERROR CHECK **/
+
+			if (response.data?.errors && response.data.errors.length > 0) {
+				throw new Error(response.data.errors[0]?.message || 'Image upload failed.');
+			}
+
+			/** IMAGE PATH **/
 
 			const responseImage = response.data?.data?.imageUploader;
 
-			console.log('+responseImage:', responseImage);
+			console.log('UPLOADED IMAGE PATH:', responseImage);
 
 			if (!responseImage) {
-				throw new Error('Image upload failed');
+				throw new Error('Image upload failed: no image path returned.');
 			}
+
+			/**
+			 * IMPORTANT
+			 *
+			 * Backenddan kelgan yangi image path
+			 * darhol state'ga yoziladi.
+			 *
+			 * Masalan:
+			 * uploads/member/abc.jpg
+			 */
 
 			setUpdateData((prev) => ({
 				...prev,
 				memberImage: responseImage,
 			}));
 
-			return `${REACT_APP_API_URL}/${responseImage}`;
-		} catch (err: any) {
-			console.log('Error, uploadImage:', err);
+			console.log('NEW UPDATE DATA IMAGE:', responseImage);
 
-			sweetErrorHandling(err).then();
+			// Inputni reset qilamiz.
+			// Keyin aynan shu rasmni yana tanlash mumkin.
+			e.target.value = '';
+
+			console.log('MEMBER IMAGE UPDATED SUCCESSFULLY');
+		} catch (err: any) {
+			console.log('ERROR, uploadImage:', err);
+
+			await sweetErrorHandling(err);
 		}
 	};
+
+	/** UPDATE PROFILE **/
 
 	const updatePropertyHandler = useCallback(async () => {
 		try {
@@ -131,40 +188,39 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 				_id: user._id,
 			};
 
-			console.log('+inputData:', inputData);
+			console.log('==============================');
 
-			// UPDATE_MEMBER mutation
+			console.log('UPDATE MEMBER INPUT:', inputData);
+
+			console.log('MEMBER IMAGE:', inputData.memberImage);
+
+			console.log('==============================');
+
+			/** UPDATE_MEMBER **/
+
 			const result = await updateMember({
 				variables: {
 					input: inputData,
 				},
 			});
 
-			console.log('+UPDATE_MEMBER RESULT:', result.data?.updateMember);
+			console.log('UPDATE_MEMBER RESULT:', result.data?.updateMember);
 
-			/*
-				DIQQAT:
-
-				UPDATE_MEMBER mutation accessToken qaytarmayapti.
-
-				Shuning uchun bu yerda:
-
-				updateUserInfo(...)
-				updateStorage(...)
-
-				ISHlatmaymiz.
-
-				Aks holda jwt-decode objectni token deb o‘ylab,
-				"Invalid token specified" xatosi beradi.
-			*/
+			/**
+			 * UPDATE_MEMBER mutation
+			 * accessToken qaytarmasa,
+			 * tokenni bu yerda o'zgartirmaymiz.
+			 */
 
 			await sweetMixinSuccessAlert('Information updated successfully.');
 		} catch (err: any) {
-			console.log('Error, updateMember:', err);
+			console.log('ERROR, updateMember:', err);
 
-			sweetErrorHandling(err).then();
+			await sweetErrorHandling(err);
 		}
 	}, [updateData, user?._id, updateMember]);
+
+	/** DISABLED CHECK **/
 
 	const doDisabledCheck = () => {
 		if (!updateData.memberNick || !updateData.memberPhone || !updateData.memberAddress || !updateData.memberImage) {
@@ -174,13 +230,21 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 		return false;
 	};
 
-	console.log('+updateData:', updateData);
+	console.log('CURRENT UPDATE DATA:', updateData);
 
 	/** MOBILE **/
 
 	if (device === 'mobile') {
 		return <>MY PROFILE PAGE MOBILE</>;
 	}
+
+	/** IMAGE URL **/
+
+	const memberImageUrl = updateData?.memberImage
+		? `${REACT_APP_API_URL}/${updateData.memberImage.replace(/^\/+/, '')}`
+		: '/img/profile/defaultUser.svg';
+
+	console.log('MEMBER IMAGE URL:', memberImageUrl);
 
 	/** DESKTOP **/
 
@@ -206,14 +270,7 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 
 					<Stack className="image-big-box">
 						<Stack className="image-box">
-							<img
-								src={
-									updateData?.memberImage
-										? `${REACT_APP_API_URL}/${updateData.memberImage}`
-										: `/img/profile/defaultUser.svg`
-								}
-								alt="Profile"
-							/>
+							<img src={memberImageUrl} alt="Profile" />
 						</Stack>
 
 						<Stack className="upload-big-box">
@@ -245,10 +302,10 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 							placeholder="Your username"
 							value={updateData.memberNick}
 							onChange={({ target: { value } }) =>
-								setUpdateData({
-									...updateData,
+								setUpdateData((prev) => ({
+									...prev,
 									memberNick: value,
-								})
+								}))
 							}
 						/>
 					</Stack>
@@ -261,10 +318,10 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 							placeholder="Your Phone"
 							value={updateData.memberPhone}
 							onChange={({ target: { value } }) =>
-								setUpdateData({
-									...updateData,
+								setUpdateData((prev) => ({
+									...prev,
 									memberPhone: value,
-								})
+								}))
 							}
 						/>
 					</Stack>
@@ -280,10 +337,10 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 						placeholder="Your address"
 						value={updateData.memberAddress}
 						onChange={({ target: { value } }) =>
-							setUpdateData({
-								...updateData,
+							setUpdateData((prev) => ({
+								...prev,
 								memberAddress: value,
-							})
+							}))
 						}
 					/>
 				</Stack>

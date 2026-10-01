@@ -7,8 +7,8 @@ import { Property } from '../../types/property/property';
 import { PropertiesInquiry } from '../../types/property/property.input';
 import { T } from '../../types/common';
 import { useRouter } from 'next/router';
-import { GET_PROPERTIES } from '../../../apollo/user/query';
 import { useQuery } from '@apollo/client';
+import { GET_PROPERTIES } from '../../../apollo/user/query';
 
 const MyProperties: NextPage = ({ initialInput, ...props }: any) => {
 	const device = useDeviceDetect();
@@ -19,8 +19,6 @@ const MyProperties: NextPage = ({ initialInput, ...props }: any) => {
 	const [total, setTotal] = useState<number>(0);
 
 	/** APOLLO REQUESTS **/
-	/** APOLLO REQUESTS **/
-
 	const {
 		loading: getPropertiesLoading,
 		data: getPropertiesData,
@@ -28,25 +26,18 @@ const MyProperties: NextPage = ({ initialInput, ...props }: any) => {
 		refetch: getPropertiesRefetch,
 	} = useQuery(GET_PROPERTIES, {
 		fetchPolicy: 'network-only',
-
-		variables: {
-			input: searchFilter,
-		},
-
+		variables: { input: searchFilter },
 		skip: !searchFilter?.search?.memberId,
-
 		notifyOnNetworkStatusChange: true,
-
 		onCompleted: (data: any) => {
-			setAgentProperties(data?.getProperties?.list || []);
-
-			setTotal(data?.getProperties?.metaCounter?.[0]?.total ?? 0);
+			setAgentProperties(data?.getProperties?.list);
+			setTotal(data?.getProperties?.metaCounter[0]?.total ?? 0);
 		},
 	});
 
 	/** LIFECYCLES **/
 	useEffect(() => {
-		getPropertiesRefetch().then()
+		getPropertiesRefetch().then();
 	}, [searchFilter]);
 
 	useEffect(() => {

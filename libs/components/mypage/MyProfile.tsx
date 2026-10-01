@@ -6,7 +6,7 @@ import axios from 'axios';
 
 import { Messages, REACT_APP_API_GRAPHQL_URL, REACT_APP_API_URL } from '../../config';
 
-import { getJwtToken } from '../../auth';
+import { getJwtToken, updateStorage, updateUserInfo } from '../../auth';
 
 import { useMutation, useReactiveVar } from '@apollo/client';
 import { userVar } from '../../../apollo/store';
@@ -177,49 +177,23 @@ const MyProfile: NextPage = ({ initialValues }: any) => {
 
 	const updatePropertyHandler = useCallback(async () => {
 		try {
-			// User ID mavjudligini tekshiramiz
-			if (!user?._id) {
-				throw new Error(Messages.error2);
-			}
-
-			// Backendga yuboriladigan data
-			const inputData = {
-				...updateData,
-				_id: user._id,
-			};
-
-			console.log('==============================');
-
-			console.log('UPDATE MEMBER INPUT:', inputData);
-
-			console.log('MEMBER IMAGE:', inputData.memberImage);
-
-			console.log('==============================');
-
-			/** UPDATE_MEMBER **/
-
+			if (!user._id) throw new Error(Messages.error2);
+			updateData._id = user._id;
 			const result = await updateMember({
 				variables: {
-					input: inputData,
+					input: updateData,
 				},
 			});
 
-			console.log('UPDATE_MEMBER RESULT:', result.data?.updateMember);
-
-			/**
-			 * UPDATE_MEMBER mutation
-			 * accessToken qaytarmasa,
-			 * tokenni bu yerda o'zgartirmaymiz.
-			 */
-
-			await sweetMixinSuccessAlert('Information updated successfully.');
+			// @ts-ignore
+			const jwtToken = result.data.updateMember?.accessToken;
+			await updateStorage({ jwtToken });
+			updateUserInfo(result.data.updateMember?.accessToken);
+			await sweetMixinSuccessAlert('information updated successfully.');
 		} catch (err: any) {
-			console.log('ERROR, updateMember:', err);
-
-			await sweetErrorHandling(err);
+			sweetErrorHandling(err).then();
 		}
-	}, [updateData, user?._id, updateMember]);
-
+	}, [updateData]);
 	/** DISABLED CHECK **/
 
 	const doDisabledCheck = () => {

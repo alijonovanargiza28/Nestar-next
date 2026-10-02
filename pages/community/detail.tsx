@@ -488,7 +488,7 @@ const CommunityDetail: NextPage = ({ initialInput, ...props }: T) => {
 																/>
 															</IconButton>
 
-															<IconButton
+															<IconButton //@ts-ignore
 																onClick={(e) => {
 																	setUpdatedComment(commentData?.commentContent);
 																	setUpdatedCommentWordsCnt(commentData?.commentContent?.length);

@@ -6,7 +6,7 @@ import { getJwtToken } from '../../auth';
 import { Messages, REACT_APP_API_URL } from '../../config';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { T } from '../../types/common';
+import { T } from '../../types/common'; //@ts-ignore
 import '@toast-ui/editor/dist/toastui-editor.css';
 import { sweetErrorHandling, sweetTopSmallSuccessAlert } from '../../sweetAlert';
 import { useMutation } from '@apollo/client';

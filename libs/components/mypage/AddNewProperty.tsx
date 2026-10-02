@@ -313,7 +313,7 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 									onChange={({ target: { value } }) =>
 										setInsertPropertyData({
 											...insertPropertyData,
-											propertyType: value,
+											propertyType: value as PropertyType
 										})
 									}
 								>
@@ -344,7 +344,7 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 									onChange={({ target: { value } }) =>
 										setInsertPropertyData({
 											...insertPropertyData,
-											propertyLocation: value,
+											propertyLocation: value as PropertyLocation
 										})
 									}
 								>

@@ -61,7 +61,7 @@ class LoggingWebSocket {
 	}
 
 	send( data: string | ArrayBuffer | SharedArrayBuffer | Blob | ArrayBufferView) {
-		this.socket.send(data);
+		this.socket.send(data as string);
 	}
 
 	close() {
@@ -103,10 +103,8 @@ function createIsomorphicLink() {
 						headers: getHeaders(),
 					};
 				},
-				webSocketImpl:LoggingWebSocket
-
 			},
-
+			webSocketImpl: LoggingWebSocket,
 		});
 
 		/* ERROR LINK */

@@ -66,7 +66,7 @@ const CommunityCard = (props: CommunityCardProps) => {
 			sx={{
 				width: size === 'small' ? '285px' : '317px',
 			}}
-			className="community-general-card-config"
+			className="community-general-card-config" //@ts-ignore
 			onClick={(e) => chooseArticleHandler(e, boardArticle)}
 		>
 			<Stack className="image-box">
@@ -76,7 +76,7 @@ const CommunityCard = (props: CommunityCardProps) => {
 			<Stack className="desc-box" sx={{ marginTop: '-20px' }}>
 				<Stack>
 					<Typography
-						className="desc"
+						className="desc" //@ts-ignore
 						onClick={(e) => {
 							e.stopPropagation();
 

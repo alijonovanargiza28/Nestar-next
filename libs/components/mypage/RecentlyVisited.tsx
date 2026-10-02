@@ -16,22 +16,22 @@ const RecentlyVisited: NextPage = () => {
 
 	/** APOLLO REQUESTS **/
 	const {
-			loading: getFavoritesLoading,
-			data: getFavoritesData,
-			error: getFavoritesError,
-			refetch: getFavoritesRefetch,
-		} = useQuery(GET_VISITED, {
-			fetchPolicy: 'network-only',
-			variables: {
-				input: searchVisited,
-			},
-			notifyOnNetworkStatusChange: true,
-	
-			onCompleted(data: T) {
-				setRecentlyVisited(data.getVisited?.list);
-				setTotal(data.getFavorites?.metaCounter?.[0]?.total || 0);
-			},
-		});
+		loading: getVisitedLoading,
+		data: getVisitedData,
+		error: getVisitedError,
+		refetch: getVisitedRefetch,
+	} = useQuery(GET_VISITED, {
+		fetchPolicy: 'network-only',
+		variables: {
+			input: searchVisited,
+		},
+		notifyOnNetworkStatusChange: true,
+
+		onCompleted(data: T) {
+			setRecentlyVisited(data.getVisited?.list);
+			setTotal(data.getFavorites?.metaCounter?.[0]?.total || 0);
+		},
+	});
 
 	/** HANDLERS **/
 	const paginationHandler = (e: T, value: number) => {

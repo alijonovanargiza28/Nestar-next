@@ -16,15 +16,10 @@ import { GET_PROPERTY } from '../../../apollo/user/query';
 const AddProperty = ({ initialValues, ...props }: any) => {
 	const device = useDeviceDetect();
 	const router = useRouter();
-
 	const inputRef = useRef<HTMLInputElement | null>(null);
-
 	const [insertPropertyData, setInsertPropertyData] = useState<PropertyInput>(initialValues);
-
 	const [propertyType, setPropertyType] = useState<PropertyType[]>(Object.values(PropertyType));
-
 	const [propertyLocation, setPropertyLocation] = useState<PropertyLocation[]>(Object.values(PropertyLocation));
-
 	const token = getJwtToken();
 	const user = useReactiveVar(userVar);
 
@@ -84,13 +79,6 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 	async function uploadImages() {
 		try {
 			const selectedFiles = inputRef.current?.files;
-
-			console.log('========== IMAGE UPLOAD ==========');
-			console.log('FILES:', selectedFiles);
-			console.log('FILE COUNT:', selectedFiles?.length);
-			console.log('TOKEN:', token);
-			console.log('GRAPHQL URL:', process.env.REACT_APP_API_GRAPHQL_URL);
-
 			if (!selectedFiles || selectedFiles.length === 0) {
 				console.log('NO FILE SELECTED');
 				return;
@@ -104,19 +92,8 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 				throw new Error('Authorization token was not found.');
 			}
 
-			/**
-			 * 1. FormData yaratamiz
-			 */
 			const formData = new FormData();
 
-			/**
-			 * 2. Tanlangan file soniga qarab
-			 * null array yaratamiz
-			 *
-			 * 1 ta file => [null]
-			 * 2 ta file => [null, null]
-			 * 5 ta file => [null, null, null, null, null]
-			 */
 			const files = Array.from({ length: selectedFiles.length }, () => null);
 
 			/**
@@ -161,13 +138,6 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 				formData.append(`${i}`, selectedFiles[i]);
 			}
 
-			console.log('OPERATIONS:', {
-				files,
-				target: 'property',
-			});
-
-			console.log('MAP:', map);
-
 			/**
 			 * 6. Backendga yuboramiz
 			 */
@@ -178,20 +148,12 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 				},
 			});
 
-			console.log('UPLOAD RESPONSE:', response.data);
-
-			/**
-			 * GraphQL error bo'lsa
-			 */
 			if (response.data?.errors && response.data.errors.length > 0) {
 				console.error('GRAPHQL UPLOAD ERROR:', response.data.errors);
 
 				throw new Error(response.data.errors[0]?.message || 'Image upload failed');
 			}
 
-			/**
-			 * 7. Backenddan qaytgan image pathlar
-			 */
 			const responseImages = response.data?.data?.imagesUploader;
 
 			console.log('RESPONSE IMAGES:', responseImages);
@@ -200,17 +162,11 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 				throw new Error('Images were not uploaded. Backend returned an invalid response.');
 			}
 
-			/**
-			 * 8. State'ga image pathlarni yozamiz
-			 */
 			setInsertPropertyData((prev) => ({
 				...prev,
 				propertyImages: responseImages,
 			}));
 
-			/**
-			 * 9. Inputni tozalaymiz
-			 */
 			if (inputRef.current) {
 				inputRef.current.value = '';
 			}
@@ -218,8 +174,6 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 			console.log('========== IMAGE UPLOAD SUCCESS ==========');
 		} catch (err: any) {
 			console.error('IMAGE UPLOAD ERROR:', err);
-
-			console.error('ERROR RESPONSE:', err?.response?.data);
 
 			await sweetMixinErrorAlert(err?.response?.data?.errors?.[0]?.message || err?.message || 'Image upload failed');
 		}
@@ -230,8 +184,8 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 	const doDisabledCheck = () => {
 		if (
 			insertPropertyData.propertyTitle === '' ||
-			insertPropertyData.propertyPrice === 0 ||
-			insertPropertyData.propertyType === '' ||
+			insertPropertyData.propertyPrice === 0 || //@ts-ignore
+			insertPropertyData.propertyType === '' || //@ts-ignore
 			insertPropertyData.propertyLocation === '' ||
 			insertPropertyData.propertyAddress === '' ||
 			insertPropertyData.propertyRooms === 0 ||
@@ -257,7 +211,6 @@ const AddProperty = ({ initialValues, ...props }: any) => {
 			});
 
 			await sweetMixinSuccessAlert('This property has been created successfully.');
-
 			await router.push({
 				pathname: '/mypage',
 				query: {

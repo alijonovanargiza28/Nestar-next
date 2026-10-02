@@ -591,6 +591,16 @@ body::-webkit-scrollbar {
 						width: auto;
 						height: auto;
 						display: flex;
+						background: #3c96cf;
+						border-radius: 20px 20px 20px 0px;
+						color: #fff;
+					}
+					.welcome{
+						margin-left: 10px;
+						padding: 9px;
+						width: auto;
+						height: auto;
+						display: flex;
 						background: #9fa7ac;
 						border-radius: 20px 20px 20px 0px;
 						color: #fff;

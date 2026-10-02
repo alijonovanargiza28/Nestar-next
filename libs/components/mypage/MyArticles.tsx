@@ -54,13 +54,10 @@ const MyArticles: NextPage = ({ initialInput, ...props }: T) => {
 	const likeBoArticleHandler = async (e: any, user: any, id: string) => {
 		try {
 			e.stopPropagation();
-
-			if (user?.meLiked) return;
-
+			if (!id)return
 			if (!user?._id) {
 				throw new Error(Messages.error2);
 			}
-
 			await likeTargetBoardArticle({
 				variables: {
 					input: id,
